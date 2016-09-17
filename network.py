@@ -20,23 +20,30 @@ class BackpropNetwork:
         """Feed in_vec to this network and return the weighted inputs and activations of each layer."""
         w_ins = np.array([np.empty((layer.size, 1)) for layer in self.layers])
         l_outs = np.array([np.empty((layer.size, 1)) for layer in self.layers])
-        l_outs[-1] = in_vec
 
-        for i in range(len(self.layers)):
+        w_ins[0] = self.layers[0].weighted_inputs(in_vec)
+        l_outs[0] = self.layers[0].xfer_func(w_ins[0])
+        for i in range(1, len(self.layers)):
             w_ins[i] = self.layers[i].weighted_inputs(l_outs[i-1])
             l_outs[i] = self.layers[i].xfer_func(w_ins[i])
 
         return w_ins, l_outs
 
-    def train(self, data, batch_size, epochs, lrn_rate):
+    def train(self, data, batch_size, epochs, lrn_rate, print_batches=0):
         """Adjust the weights of this network given a training set of (input, expected_output) pairs."""
 
-        for _ in range(epochs):
+        for i in range(epochs):
             shuffle(data)
             batches = [data[i:i+batch_size] for i in range(0, len(data), batch_size)]
 
-            for batch in batches:
+            for j, batch in enumerate(batches):
                 self.gradient_descent(batch, lrn_rate)
+
+                if print_batches != 0 and not ((j+1) % (len(batches)//print_batches)):
+                    print("    Batch: {}/{}".format(j+1, len(batches)))
+
+            print("Epoch {} of {} completed.".format(i+1, epochs))
+
 
     def gradient_descent(self, data, lrn_rate):
 
@@ -44,16 +51,18 @@ class BackpropNetwork:
 
         for d in data[1:]:
             w_res, b_res = self.backprop(d)
-            w_grad += w_res
+            for i in range(len(w_res)):
+                w_grad[i] += w_res[i]
             b_grad += b_res
 
-        w_grad *= len(data)/lrn_rate
+        for i in range(len(w_res)):
+            w_grad[i] *= len(data)/lrn_rate
         b_grad *= len(data)/lrn_rate
 
         for i, layer in enumerate(self.layers):
+            pre_w, pre_b = layer.ws.shape, layer.bs.shape
             layer.ws -= w_grad[i]
             layer.bs -= b_grad[i]
-
 
     def backprop(self, example):
         eg_input, exp_output = example
@@ -63,13 +72,13 @@ class BackpropNetwork:
         # grad(cost function)
         #   element-wise multiplied with
         # (derivative of the transfer function applied to weighted inputs of last layer)
-        error = np.array([np.empty(layer.size) for layer in self.layers])
+        error = np.empty_like(layer_outs)
         error[-1] = (layer_outs[-1] - exp_output) * self.layers[-1].xfer_func.dx(weighted_ins[-1])
 
         for i in range(len(error) - 2, -1, -1):
             error[i] = np.dot(self.layers[i+1].ws.transpose(), error[i+1]) * self.layers[i].xfer_func.dx(weighted_ins[i])
 
-        w_grad = np.array([np.empty(layer.ws.shape) for layer in self.layers])
+        w_grad = [np.empty_like(layer.ws) for layer in self.layers]
         w_grad[0] = error[0] * eg_input.transpose()
         for i in range(1, len(w_grad)):
             w_grad[i] = error[i] * layer_outs[i-1].transpose()
@@ -100,15 +109,3 @@ class ConnectedLayer:
             out[i] = np.dot(p[0], x) + p[1]
         return out
         #return np.array([np.dot(w, x) + b for w, b in zip(self.ws, self.bs)])
-
-net = BackpropNetwork([3, 10, 10, 3])
-
-data = [(np.array([0,0,0]).reshape(3,1), np.array([0,1,0]).reshape(3,1)),
-        (np.array([1,0,1]).reshape(3,1), np.array([0,0,1]).reshape(3,1)),
-        (np.array([0,1,0]).reshape(3,1), np.array([0,0,0]).reshape(3,1)),
-        (np.array([1,1,1]).reshape(3,1), np.array([1,0,0]).reshape(3,1))]
-net.train(data, 1, 1000, 0.1)
-
-for d in data:
-    print("{} -> {}; exp {}".format(d[0].transpose(), net.evaluate(d[0]).transpose(), d[1].transpose()))
-
