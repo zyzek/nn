@@ -1,13 +1,14 @@
 import network
-import numpy as np
-import imageprocessing as ip
+import util
 
-#training_set = ip.load_10_batch(1)
-#test_set = ip.load_10_batch(0)
-#net = network.BackpropNetwork([32 * 32 * 3, 100, 50, 30, 10])
-#net.train(training_set, batch_size=10, epochs=3, lrn_rate=0.1, print_batches=10)
+test_set = util.load_10_batch(0)
+net = network.BackpropNetwork([32 * 32 * 3, 100, 50, 30, 10])
 
-training_set, test_set = ip.load_mnist()
-net = network.BackpropNetwork([28*28, 30, 10])
-net.train(training_set, batch_size=10, epochs=30, lrn_rate=3.0, print_batches=10)
-network.evaluate_network(net, test_set)
+for i in range(1, 6):
+    net.train(util.load_10_batch(i), batch_size=10, epochs=6, lrn_rate=0.5*(0.1**(i//3)), print_batches=10)
+    accuracy = network.evaluate_network(net, test_set)
+    util.save_object(net.export_weights(), "3072-100-50-30-10_{}".format(int(100 * accuracy)))
+
+util.save_object(net.export_weights(), "3072-100-50-30-10")
+
+network.evaluate_network(net, test_set, print_progress=True)
