@@ -2,16 +2,17 @@ import numpy as np
 from functools import reduce
 from random import shuffle
 
-from nn_functions import sigmoid, ce_cost
+import nn_functions as nnf
 
 
 class BackpropNetwork:
-    def __init__(self, sizes, xfer_fn=sigmoid, cost_fn=ce_cost):
+    def __init__(self, sizes, xfer_fn=nnf.sigmoid, cost_fn=nnf.ce_cost, reg_fn=nnf.decay_L2):
         """Initialise a backpropagation network with len(sizes) - 1 layers (input layer is implicit).
         The self.layers[i] will contain sizes[i+1] neurons."""
 
         self.layers = [ConnectedLayer(p, s, xfer_fn()) for p, s in zip(sizes[:-1], sizes[1:])]
         self.cost_fn = cost_fn(self.layers[-1].xfer_fn)
+        self.reg_fn = reg_fn
 
     def export_weights(self):
         return [(layer.ws, layer.bs) for layer in self.layers]
@@ -38,7 +39,7 @@ class BackpropNetwork:
 
         return w_ins, l_outs
 
-    def train(self, data, batch_size, epochs, lrn_rate, print_batches=0):
+    def train(self, data, batch_size, epochs, lrn_rate, decay_param, print_batches=0):
         """Adjust the weights of this network given a training set of (input, expected_output) pairs."""
 
         for i in range(epochs):
@@ -46,7 +47,7 @@ class BackpropNetwork:
             batches = [data[i:i+batch_size] for i in range(0, len(data), batch_size)]
 
             for j, batch in enumerate(batches):
-                self.gradient_descent(batch, lrn_rate)
+                self.gradient_descent(batch, lrn_rate, decay_param, len(data))
 
                 if print_batches != 0 and not ((j+1) % (len(batches)//print_batches)):
                     print("    Batch: {}/{}".format(j+1, len(batches)))
@@ -54,22 +55,25 @@ class BackpropNetwork:
             print("Epoch {} of {} completed.".format(i+1, epochs))
 
     # TODO: Vectorise this
-    def gradient_descent(self, data, lrn_rate):
+    def gradient_descent(self, batch, lrn_rate, decay_param, input_size):
 
-        w_grad, b_grad = self.backprop(data[0])
+        w_grad, b_grad = self.backprop(batch[0])
 
-        for d in data[1:]:
-            w_res, b_res = self.backprop(d)
+        for example in batch[1:]:
+            w_res, b_res = self.backprop(example)
             for i in range(len(w_res)):
                 w_grad[i] += w_res[i]
             b_grad += b_res
 
+        batch_scale = lrn_rate/len(batch)
+        decay_factor = (decay_param*lrn_rate)/input_size
+
         for i in range(len(w_grad)):
-            w_grad[i] *= lrn_rate/len(data)
-        b_grad *= lrn_rate/len(data)
+            w_grad[i] *= batch_scale
+        b_grad *= batch_scale
 
         for i, layer in enumerate(self.layers):
-            layer.ws -= w_grad[i]
+            layer.ws -= self.reg_fn(layer.ws, decay_factor) + w_grad[i]
             layer.bs -= b_grad[i]
 
     def backprop(self, example):

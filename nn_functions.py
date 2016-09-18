@@ -28,3 +28,13 @@ class ce_cost(CostFunction):
     def grad(self, x, y, z):
         """Vector of partial derivative errors."""
         return x - y
+
+
+def decay_L2(weight, scale):
+    return scale * weight
+
+def decay_L1(weight, scale):
+    return scale * np.sign(weight)
+
+def decay_none(weight, scale):
+    return 0
