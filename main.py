@@ -8,6 +8,6 @@ import imageprocessing as ip
 #net.train(training_set, batch_size=10, epochs=3, lrn_rate=0.1, print_batches=10)
 
 training_set, test_set = ip.load_mnist()
-net = network.BackpropNetwork([28*28, 100, 50, 10])
-net.train(training_set, batch_size=1000, epochs=1, lrn_rate=0.1, print_batches=10)
+net = network.BackpropNetwork([28*28, 30, 10])
+net.train(training_set, batch_size=10, epochs=30, lrn_rate=3.0, print_batches=10)
 network.evaluate_network(net, test_set)

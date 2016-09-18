@@ -55,12 +55,11 @@ class BackpropNetwork:
                 w_grad[i] += w_res[i]
             b_grad += b_res
 
-        for i in range(len(w_res)):
-            w_grad[i] *= len(data)/lrn_rate
-        b_grad *= len(data)/lrn_rate
+        for i in range(len(w_grad)):
+            w_grad[i] *= lrn_rate/len(data)
+        b_grad *= lrn_rate/len(data)
 
         for i, layer in enumerate(self.layers):
-            pre_w, pre_b = layer.ws.shape, layer.bs.shape
             layer.ws -= w_grad[i]
             layer.bs -= b_grad[i]
 
@@ -124,8 +123,8 @@ def evaluate_network(net, test_set):
         if predicted == expected:
             correct += 1
 
-        if ((i+1) % (len(test_set) // 10)) == 0:
+        if ((i+1) % (len(test_set) // 10) if len(test_set) >= 10 else 1) == 0:
             print("{}/{} correct".format(correct, i+1))
 
-    print(result)
+    print(results)
     print("{:.2f}% accuracy".format(100.0 * correct / len(test_set)))
