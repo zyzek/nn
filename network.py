@@ -109,3 +109,23 @@ class ConnectedLayer:
             out[i] = np.dot(p[0], x) + p[1]
         return out
         #return np.array([np.dot(w, x) + b for w, b in zip(self.ws, self.bs)])
+
+def evaluate_network(net, test_set):
+    correct = 0
+    results = [0]*len(test_set[0][1])
+
+    for i, example in enumerate(test_set):
+        result = net.evaluate(example[0])
+
+        predicted = np.argmax(result)
+        expected = np.argmax(example[1])
+
+        results[predicted] += 1
+        if predicted == expected:
+            correct += 1
+
+        if ((i+1) % (len(test_set) // 10)) == 0:
+            print("{}/{} correct".format(correct, i+1))
+
+    print(result)
+    print("{:.2f}% accuracy".format(100.0 * correct / len(test_set)))

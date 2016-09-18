@@ -2,6 +2,7 @@ import numpy as np
 
 class sig:
     def __call__(self, x):
+        #x = np.clip(x, -500, 500)
         return 1.0 / (1.0 + np.exp(-x))
 
     def dx(self, x):
