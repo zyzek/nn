@@ -39,7 +39,7 @@ class BackpropNetwork:
 
         return w_ins, l_outs
 
-    def train(self, data, batch_size, epochs, lrn_rate, decay_param, print_batches=0):
+    def train(self, data, batch_size, epochs, lrn_rate, decay_param, unfriction, print_batches=0):
         """Adjust the weights of this network given a training set of (input, expected_output) pairs."""
 
         for i in range(epochs):
@@ -47,15 +47,14 @@ class BackpropNetwork:
             batches = [data[i:i+batch_size] for i in range(0, len(data), batch_size)]
 
             for j, batch in enumerate(batches):
-                self.gradient_descent(batch, lrn_rate, decay_param, len(data))
+                self.gradient_descent(batch, len(data), lrn_rate, decay_param, unfriction)
 
                 if print_batches != 0 and not ((j+1) % (len(batches)//print_batches)):
                     print("    Batch: {}/{}".format(j+1, len(batches)))
 
             print("Epoch {} of {} completed.".format(i+1, epochs))
 
-    # TODO: Vectorise this
-    def gradient_descent(self, batch, lrn_rate, decay_param, input_size):
+    def gradient_descent(self, batch, input_size, lrn_rate, decay_param, unfriction):
 
         w_grad, b_grad = self.backprop(batch[0])
 
@@ -73,8 +72,10 @@ class BackpropNetwork:
         b_grad *= batch_scale
 
         for i, layer in enumerate(self.layers):
-            layer.ws -= self.reg_fn(layer.ws, decay_factor) + w_grad[i]
-            layer.bs -= b_grad[i]
+            layer.w_vs = unfriction*layer.w_vs - w_grad[i]
+            layer.ws += layer.w_vs - self.reg_fn(layer.ws, decay_factor)
+            layer.b_vs = unfriction*layer.b_vs - b_grad[i]
+            layer.bs += layer.b_vs
 
     def backprop(self, example):
         eg_input, exp_output = example
@@ -97,10 +98,20 @@ class BackpropNetwork:
 
 class ConnectedLayer:
     def __init__(self, prev_size, size, xfer_fn):
+
+        # Layer size. Number of inputs is prev_size*size. Number of neurons is size.
         self.prev_size = prev_size
         self.size = size
+
+        # Weights and biases
         self.ws = np.random.randn(size, prev_size) / np.sqrt(prev_size)
         self.bs = np.random.randn(size, 1)
+
+        # Velocity terms for momentum
+        self.w_vs = np.zeros_like(self.ws)
+        self.b_vs = np.zeros_like(self.bs)
+
+        # Transfer function for neuron activation
         self.xfer_fn = xfer_fn
 
     def activate(self, x):
