@@ -20,6 +20,10 @@ def save_object(obj, filename='wts'):
         pickle.dump(obj, fo, pickle.HIGHEST_PROTOCOL)
 
 
+def load_object(filename='wts'):
+    return unpickle("data/weights/" + filename + ".pkl")
+
+
 def preprocess_cifar_10(data, labels, normalise=True):
     new_data = data.astype(np.float32).reshape(data.shape + (1,)) / 255.0
     new_labels = np.zeros((len(labels), 10, 1), np.float32)
