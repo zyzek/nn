@@ -62,7 +62,7 @@ class BackpropNetwork:
             if eval_set is not None:
                 print("Evaluating accuracy... ", end="")
                 sys.stdout.flush()
-                accuracy = self.test_network(eval_set)
+                accuracy = self.test(eval_set)
                 print("{:.2f}%".format(100.0 * accuracy))
                 
                 if accuracy > best_accuracy and save_best:
@@ -117,7 +117,7 @@ class BackpropNetwork:
 
         return w_grad, error
 
-    def test_network(self, test_set, print_progress=False):
+    def test(self, test_set, print_progress=False):
         correct = 0
         results = [0]*len(test_set[0][1])
 
