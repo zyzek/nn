@@ -3,9 +3,16 @@ import scipy.misc as spm
 import pickle
 import gzip
 
+OLD = True
+
 def unpickle(file):
     with open(file, 'rb') as fo:
-        return pickle.load(fo, encoding="bytes")
+        if not OLD:
+            return pickle.load(fo, encoding="bytes")
+        else:
+            u = pickle._Unpickler(fo)
+            u.encoding = 'latin1'
+            return u.load()
 
 
 def save_object(obj, filename='wts'):
@@ -35,7 +42,10 @@ def load_10_batch(num, normalise=True):
         filename += "test_batch"
 
     result = unpickle(filename)
-    return preprocess_cifar_10(result[b'data'], result[b'labels'], normalise)
+    if not OLD:
+        return preprocess_cifar_10(result[b'data'], result[b'labels'], normalise)
+    else:
+        return preprocess_cifar_10(result['data'], result['labels'], normalise)
 
 
 def load_mnist():
