@@ -13,16 +13,21 @@ def save_object(obj, filename='wts'):
         pickle.dump(obj, fo, pickle.HIGHEST_PROTOCOL)
 
 
-def preprocess_cifar_10(data, labels):
+def preprocess_cifar_10(data, labels, normalise=True):
     new_data = data.astype(np.float32).reshape(data.shape + (1,)) / 255.0
     new_labels = np.zeros((len(labels), 10, 1), np.float32)
     for i, label in enumerate(labels):
         new_labels[i][label] = 1.0
 
+    if normalise:
+        for i in range(len(new_data)):
+            n, x = np.min(new_data[i]), np.max(new_data[i])
+            new_data[i] = (new_data[i] - n) / (x - n)
+
     return list(zip(new_data, new_labels))
 
 
-def load_10_batch(num):
+def load_10_batch(num, normalise=True):
     filename = "data/cifar10/"
     if 1 <= num <= 5:
         filename += "data_batch_{}".format(num)
@@ -30,7 +35,7 @@ def load_10_batch(num):
         filename += "test_batch"
 
     result = unpickle(filename)
-    return preprocess_cifar_10(result[b'data'], result[b'labels'])
+    return preprocess_cifar_10(result[b'data'], result[b'labels'], normalise)
 
 
 def load_mnist():
