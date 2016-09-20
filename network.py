@@ -1,8 +1,10 @@
+import sys
 import numpy as np
 from functools import reduce
 from random import shuffle
 
 import nn_functions as nnf
+import util
 
 
 class BackpropNetwork:
@@ -39,8 +41,11 @@ class BackpropNetwork:
 
         return w_ins, l_outs
 
-    def train(self, data, batch_size, epochs, lrn_rate, decay_param, unfriction, print_batches=0):
+    def train(self, data, batch_size, epochs, lrn_rate, decay_param, unfriction,
+              eval_set=None, diminish_lrn_rate=True, save_best=True, print_batches=0):
         """Adjust the weights of this network given a training set of (input, expected_output) pairs."""
+        last_accuracy = 0
+        best_accuracy = 0
 
         for i in range(epochs):
             shuffle(data)
@@ -53,6 +58,23 @@ class BackpropNetwork:
                     print("    Batch: {}/{}".format(j+1, len(batches)))
 
             print("Epoch {} of {} completed.".format(i+1, epochs))
+
+            if eval_set is not None:
+                print("Evaluating accuracy... ", end="")
+                sys.stdout.flush()
+                accuracy = self.test_network(eval_set)
+                print("{:.2f}%".format(100.0 * accuracy))
+                
+                if accuracy > best_accuracy and save_best:
+                    best_accuracy = accuracy
+                    name = "-".join([str(self.layers[0].prev_size)] + [str(layer.size) for layer in self.layers])
+                    util.save_object(self, name + "_{}".format(int(100 * accuracy)))
+
+                if accuracy < last_accuracy and diminish_lrn_rate:
+                    print("Reducing learning rate from {} to {}.".format(lrn_rate, lrn_rate/2))
+                    lrn_rate /= 2
+                last_accuracy = accuracy
+
 
     def gradient_descent(self, batch, input_size, lrn_rate, decay_param, unfriction):
 
@@ -95,6 +117,26 @@ class BackpropNetwork:
 
         return w_grad, error
 
+    def test_network(self, test_set, print_progress=False):
+        correct = 0
+        results = [0]*len(test_set[0][1])
+
+        for i, example in enumerate(test_set):
+            result = self.evaluate(example[0])
+
+            predicted = np.argmax(result)
+            expected = np.argmax(example[1])
+
+            results[predicted] += 1
+            if predicted == expected:
+                correct += 1
+
+            if print_progress and (((i+1) % (len(test_set) // 10) if len(test_set) >= 10 else 1) == 0):
+                print("{}/{} correct".format(correct, i+1))
+
+        accuracy = correct / len(test_set)
+        #print("{:.2f}% accuracy".format(100.0 * accuracy))
+        return accuracy
 
 class ConnectedLayer:
     def __init__(self, prev_size, size, xfer_fn):
@@ -126,24 +168,4 @@ class ConnectedLayer:
             out[i] = np.dot(p[0], x) + p[1]
         return out
 
-def evaluate_network(net, test_set, print_progress=False):
-    correct = 0
-    results = [0]*len(test_set[0][1])
 
-    for i, example in enumerate(test_set):
-        result = net.evaluate(example[0])
-
-        predicted = np.argmax(result)
-        expected = np.argmax(example[1])
-
-        results[predicted] += 1
-        if predicted == expected:
-            correct += 1
-
-        if print_progress and (((i+1) % (len(test_set) // 10) if len(test_set) >= 10 else 1) == 0):
-            print("{}/{} correct".format(correct, i+1))
-
-    accuracy = correct / len(test_set)
-    print(results)
-    print("{:.2f}% accuracy".format(100.0 * accuracy))
-    return accuracy
