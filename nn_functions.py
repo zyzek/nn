@@ -17,6 +17,7 @@ class CostFunction:
     def __init__(self, xfer_fn):
         self.xfer_fn = xfer_fn
 
+
 class quad_cost(CostFunction):
     """Mean squared error / quadratic cost function."""
     def __call__(self, x, y):
@@ -26,6 +27,7 @@ class quad_cost(CostFunction):
     def grad(self, x, y, z):
         """Vector of partial derivative errors."""
         return (x - y) * self.xfer_fn.dx(z)
+
 
 class ce_cost(CostFunction):
     """Cross-entropy cost function."""
@@ -42,8 +44,10 @@ class ce_cost(CostFunction):
 def decay_L2(weight, scale):
     return scale * weight
 
+
 def decay_L1(weight, scale):
     return scale * np.sign(weight)
+
 
 def decay_none(weight, scale):
     return 0

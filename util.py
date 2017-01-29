@@ -2,6 +2,7 @@ import numpy as np
 import scipy.misc as spm
 import pickle
 
+# Here for backwards compatibility with some versions of python older than 3.5
 OLD = True
 
 
@@ -27,6 +28,13 @@ def load_object(filename='net'):
     return unpickle("data/" + filename + ".pkl")
 
 
+def normalised(item):
+    n, x = np.min(item), np.max(item)
+    return (item - n) / (x - n)
+
+def bmp_to_float(array):
+    return array.astype(np.float32).reshape(array.shape + (1,)) / 255.0
+
 def preprocess_cifar(data, labels, num_labels, normalise=True):
     """Given the raw data and labels from a pickled CIFAR data set,
     convert it inot a suitable form for use in a neural network.
@@ -39,7 +47,8 @@ def preprocess_cifar(data, labels, num_labels, normalise=True):
     """
 
     # Turn the data into floats between 0 and 1.
-    new_data = data.astype(np.float32).reshape(data.shape + (1,)) / 255.0
+    #new_data = data.astype(np.float32).reshape(data.shape + (1,)) / 255.0
+    new_data = bmp_to_float(data)
 
     # Generate from the labels neural output sequences.
     new_labels = np.zeros((len(labels), num_labels, 1), np.float32)
@@ -48,8 +57,7 @@ def preprocess_cifar(data, labels, num_labels, normalise=True):
 
     if normalise:
         for i in range(len(new_data)):
-            n, x = np.min(new_data[i]), np.max(new_data[i])
-            new_data[i] = (new_data[i] - n) / (x - n)
+            new_data[i] = normalised(new_data[i])
 
     return list(zip(new_data, new_labels))
 
@@ -85,6 +93,45 @@ def load_20_set(filename, normalise=True):
         return preprocess_cifar(result[b'data'], result[b'coarse_labels'], 20, normalise)
     else:
         return preprocess_cifar(result['data'], result['coarse_labels'], 20, normalise)
+
+
+def load_test_sequence(folder, normalise=True):
+    """Load a sequence of test images from the given folder."""
+    images = []
+
+    i = 0
+
+    while True:
+        try:
+            img = spm.imread(folder + "/img"+["0"+str(i), str(i)][i>9])
+            if normalise:
+                images.append(normalised(bmp_to_float(img)))
+            else:
+                images.append(bmp_to_float(img))
+            i += 1
+        except:
+            break
+
+    return images
+
+def eval_images(net_name, image_folder_name):
+    net = load_object(net_name)
+    test_set = load_test_sequence(image_folder_name)
+
+    results = []
+
+    for example in test_set:
+        converted = np.array([example[:,:,c] for c in [0,1,2]]).reshape((3072,1))
+        results.append(np.argmax(net.evaluate(converted)))
+
+    return results
+
+
+def write_results(results, filename):
+    import csv
+    with open(filename, 'w') as csv_file:
+        csv_writer = csv.writer(csv_file, delimiter=",")
+        csv_writer.writerow(results)
 
 
 def render_image(image, in_shape=(3, 32, 32), out_dim=(512, 512)):

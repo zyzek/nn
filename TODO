@@ -1,8 +1,0 @@
-# TODO: Compression
-# TODO: tanh, rectified linear neurons
-# TODO: hyperparameter search
-# TODO: convolutional
-# TODO: vectorisation (particularly of gradient_descent())
-# TODO: expand data set (rotations, scaling)
-# TODO: dropout
-# TODO: ensembles

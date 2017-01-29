@@ -231,3 +231,7 @@ class ConnectedLayer:
             out[i] = np.dot(p[0], x) + p[1]
         return out
 
+
+def softmax(sequence):
+    e = np.exp(sequence)
+    return e / np.sum(e)
